@@ -1,3 +1,6 @@
 <Solution>
   <Project Path="ChuanLeMaServer/ChuanLeMaServer.csproj" />
+  <Project Path="Model/Model.csproj" />
+  <Project Path="Repository/Repository.csproj" />
+  <Project Path="Service/Service.csproj" />
 </Solution>
