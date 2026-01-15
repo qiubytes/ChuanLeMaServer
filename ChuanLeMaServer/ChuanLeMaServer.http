@@ -1,0 +1,6 @@
+@ChuanLeMaServer_HostAddress = http://localhost:5210
+
+GET {{ChuanLeMaServer_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
