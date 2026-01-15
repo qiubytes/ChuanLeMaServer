@@ -1,6 +1,9 @@
 
+using Autofac;
+using Autofac.Extensions.DependencyInjection;
 using Serilog;
 using Serilog.Events;
+using Serilog.Extensions.Logging;
 
 namespace ChuanLeMaServer
 {
@@ -9,7 +12,7 @@ namespace ChuanLeMaServer
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-            // 配置 Serilog
+            // 1、配置 Serilog
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
@@ -27,7 +30,42 @@ namespace ChuanLeMaServer
                     outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
                 .CreateLogger();
 
-            builder.Host.UseSerilog();
+            //builder.Host.UseSerilog();
+            // 2. 使用 Autofac 作为服务容器
+            builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory())
+                .UseSerilog();
+
+            // 3. 配置 Autofac 容器
+            builder.Host.ConfigureContainer<ContainerBuilder>(containerBuilder =>
+            {
+                // 注册控制器（支持属性注入）
+                //containerBuilder.RegisterType<Controllers.ProductsController>()
+                //    .PropertiesAutowired();
+
+                // 注册服务
+                //containerBuilder.RegisterType<ProductService>()
+                //    .As<IProductService>()
+                //    .InstancePerLifetimeScope();
+
+                // 注册 Serilog ILogger
+                // 正确注册 Microsoft.Extensions.Logging.ILoggerFactory
+                containerBuilder.RegisterInstance(new SerilogLoggerFactory(Log.Logger, true))
+                    .As<ILoggerFactory>()
+                    .SingleInstance();
+
+                // 注册泛型 ILogger<T>
+                containerBuilder.RegisterGeneric(typeof(Logger<>))
+                    .As(typeof(ILogger<>))
+                    .SingleInstance();
+
+                // 注册泛型 ILogger<T>
+                //containerBuilder.RegisterGeneric(typeof(Logger<>))
+                //    .As(typeof(ILogger<>))
+                //    .SingleInstance();
+
+                // 注册其他服务
+                //containerBuilder.RegisterModule(new ServiceModule());
+            });
             // Add services to the container.
 
             builder.Services.AddControllers();
