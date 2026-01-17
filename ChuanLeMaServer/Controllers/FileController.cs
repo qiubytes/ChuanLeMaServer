@@ -1,6 +1,8 @@
-﻿using Dto.File;
+﻿using System.Net;
+using Dto.File;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Configuration;
 using Model;
 
@@ -63,6 +65,37 @@ namespace ChuanLeMaServer.Controllers
 
             return Ok(new ResponseResult<List<FolderFileDataModel>>(folderfiles));
         }
-    
+
+        /// <summary>
+        /// 下载文件
+        /// </summary>
+        /// <param name="downloadRequestDto"></param>
+        /// <returns></returns>
+        [HttpPost("downloadfile")]
+        public IActionResult DownloadFile(FileDownloadRequestDto downloadRequestDto)
+        {
+            string fullpath = Path.Combine(_fileDir, downloadRequestDto.filepath);
+            FileStream fs = new FileStream(fullpath, FileMode.Open, FileAccess.Read);
+            // 启用分块传输，适合大文件
+            Response.Headers.Add("Accept-Ranges", "bytes");
+
+            FileInfo fileInfo = new FileInfo(fullpath);
+            IContentTypeProvider _contentTypeProvider = new FileExtensionContentTypeProvider();
+            // 尝试获取 MIME 类型
+            string mimetype = "";
+            if (_contentTypeProvider.TryGetContentType(fileInfo.FullName, out string contentType))
+            {
+                mimetype = contentType;
+            }
+            else
+            {
+                mimetype = "application/octet-stream";
+            }
+            return new FileStreamResult(fs, mimetype)
+            {
+                FileDownloadName = fileInfo.Name,
+                EnableRangeProcessing = true // 支持断点续传
+            };
+        }
     }
 }
