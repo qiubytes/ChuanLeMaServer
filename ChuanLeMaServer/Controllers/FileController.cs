@@ -61,7 +61,8 @@ namespace ChuanLeMaServer.Controllers
                 });
             }
 
-            return Ok(folderfiles);
+            return Ok(new ResponseResult<List<FolderFileDataModel>>(folderfiles));
         }
+    
     }
 }
