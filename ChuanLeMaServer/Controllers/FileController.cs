@@ -74,7 +74,12 @@ namespace ChuanLeMaServer.Controllers
         [HttpPost("downloadfile")]
         public IActionResult DownloadFile(FileDownloadRequestDto downloadRequestDto)
         {
+            downloadRequestDto.filepath = downloadRequestDto.filepath.TrimStart('/');
             string fullpath = Path.Combine(_fileDir, downloadRequestDto.filepath);
+            if (!System.IO.File.Exists(fullpath))
+            {
+                return Ok(new ResponseResult<string>("",401,"无权限或无此文件！"));
+            }
             FileStream fs = new FileStream(fullpath, FileMode.Open, FileAccess.Read);
             // 启用分块传输，适合大文件
             Response.Headers.Add("Accept-Ranges", "bytes");
@@ -96,6 +101,25 @@ namespace ChuanLeMaServer.Controllers
                 FileDownloadName = fileInfo.Name,
                 EnableRangeProcessing = true // 支持断点续传
             };
+        }
+        /// <summary>
+        /// 上传文件 单个
+        /// </summary>
+        /// <param name="file"></param>
+        /// <returns></returns>
+        [HttpPost("uploadfile")]
+        public async Task<IActionResult> UploadWithData([FromForm] FileUploadDto dto)
+        {
+            dto.workpath = dto.workpath.TrimStart('/');
+            if (dto.File == null || dto.File.Length == 0)
+                return BadRequest("请选择文件");
+            string fullpath = Path.Combine(_fileDir, dto.workpath,dto.File.FileName); 
+            // 保存文件
+            using (var stream = new FileStream(fullpath, FileMode.Create))
+            {
+                await dto.File.CopyToAsync(stream);
+            } 
+            return Ok(new ResponseResult<string>(msg:"上传成功！"));
         }
     }
 }

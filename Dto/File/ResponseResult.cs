@@ -6,9 +6,11 @@ namespace Dto.File;
 /// <typeparam name="T"></typeparam>
 public class ResponseResult<T>
 {
-    public ResponseResult(T tData)
+    public ResponseResult(T tData=default(T), int code = 200, string msg = "")
     {
         data = tData;
+        this.code = code;
+        this.msg = msg;
     }
 
     /// <summary>
@@ -20,6 +22,7 @@ public class ResponseResult<T>
     /// 消息
     /// </summary>
     public string msg { get; set; } = "";
+
     /// <summary>
     /// 数据
     /// </summary>
