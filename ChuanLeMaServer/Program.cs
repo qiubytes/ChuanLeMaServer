@@ -12,6 +12,7 @@ namespace ChuanLeMaServer
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            builder.WebHost.UseUrls("http://*:5210");
             // 1°¢≈‰÷√ Serilog
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
