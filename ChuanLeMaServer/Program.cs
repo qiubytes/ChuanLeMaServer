@@ -1,6 +1,7 @@
 
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Http.Features;
 using Serilog;
 using Serilog.Events;
 using Serilog.Extensions.Logging;
@@ -12,6 +13,33 @@ namespace ChuanLeMaServer
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            // 配置 Kestrel 服务器
+            builder.WebHost.ConfigureKestrel(serverOptions =>
+            {
+                serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(20);
+                serverOptions.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(10);
+                serverOptions.Limits.MaxRequestBodySize = 1024L * 1024L * 1024L * 10L; // 10GB
+                serverOptions.Limits.MinRequestBodyDataRate = null; // 禁用最小数据速率限制
+                serverOptions.Limits.MinResponseDataRate = null;    // 禁用响应数据速率限制  
+                // 针对上传单独配置
+                serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(60);
+
+                // 增加并发连接数
+                serverOptions.Limits.MaxConcurrentConnections = 1000;
+                serverOptions.Limits.MaxConcurrentUpgradedConnections = 1000;
+            });
+            // 配置表单选项
+            builder.Services.Configure<FormOptions>(options =>
+            {
+                options.MultipartBodyLengthLimit = 10L * 1024 * 1024 * 1024; // 10GB
+                options.ValueLengthLimit = int.MaxValue;
+                options.MultipartHeadersLengthLimit = int.MaxValue;
+                options.MultipartBoundaryLengthLimit = int.MaxValue;
+                options.BufferBodyLengthLimit = 10L * 1024 * 1024 * 1024; // 10GB
+                options.MemoryBufferThreshold = 1024 * 1024 * 10; // 10MB
+                options.BufferBody = true;
+            });
+
             builder.WebHost.UseUrls("http://*:5210");
             // 1、配置 Serilog
             Log.Logger = new LoggerConfiguration()

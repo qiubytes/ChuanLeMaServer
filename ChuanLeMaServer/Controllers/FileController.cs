@@ -9,7 +9,7 @@ using Model;
 namespace ChuanLeMaServer.Controllers
 {
     [Route("[controller]")]
-    [ApiController]
+    [ApiController] 
     public class FileController : ControllerBase
     {
         private readonly ILogger<FileController> _logger;
