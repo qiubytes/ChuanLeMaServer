@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Repository.Interfaces;
+using Service.Interfaces;
 
 namespace ChuanLeMaServer.Controllers
 {
@@ -9,15 +10,19 @@ namespace ChuanLeMaServer.Controllers
     [ApiController]
     public class UserController : ControllerBase
     {
-        private IAppUserRepository _appuserrespo;
-        public UserController(IAppUserRepository appuserrespo)
+        //private IAppUserRepository _appuserrespo;
+        private readonly IAppUserService _appuserservice;
+        public UserController(
+            //   IAppUserRepository appuserrespo,
+            IAppUserService appuserservice
+            )
         {
-            _appuserrespo = appuserrespo;
+            _appuserservice = appuserservice;
         }
         [HttpGet("test")]
         public async Task<IActionResult> Test()
         {
-            var user = await _appuserrespo.All();
+            var user = await _appuserservice.All();
             return Ok(user);
         }
     }
