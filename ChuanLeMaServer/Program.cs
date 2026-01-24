@@ -1,10 +1,15 @@
-
+ï»¿
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi;
+using Repository;
 using Serilog;
 using Serilog.Events;
 using Serilog.Extensions.Logging;
+using System;
+using System.Reflection;
 
 namespace ChuanLeMaServer
 {
@@ -13,22 +18,22 @@ namespace ChuanLeMaServer
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-            // ÅäÖÃ Kestrel ·şÎñÆ÷
+            // é…ç½® Kestrel æœåŠ¡å™¨
             builder.WebHost.ConfigureKestrel(serverOptions =>
             {
                 serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(20);
                 serverOptions.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(10);
                 serverOptions.Limits.MaxRequestBodySize = 1024L * 1024L * 1024L * 10L; // 10GB
-                serverOptions.Limits.MinRequestBodyDataRate = null; // ½ûÓÃ×îĞ¡Êı¾İËÙÂÊÏŞÖÆ
-                serverOptions.Limits.MinResponseDataRate = null;    // ½ûÓÃÏìÓ¦Êı¾İËÙÂÊÏŞÖÆ  
-                // Õë¶ÔÉÏ´«µ¥¶ÀÅäÖÃ
+                serverOptions.Limits.MinRequestBodyDataRate = null; // ç¦ç”¨æœ€å°æ•°æ®é€Ÿç‡é™åˆ¶
+                serverOptions.Limits.MinResponseDataRate = null;    // ç¦ç”¨å“åº”æ•°æ®é€Ÿç‡é™åˆ¶  
+                // é’ˆå¯¹ä¸Šä¼ å•ç‹¬é…ç½®
                 serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(60);
 
-                // Ôö¼Ó²¢·¢Á¬½ÓÊı
+                // å¢åŠ å¹¶å‘è¿æ¥æ•°
                 serverOptions.Limits.MaxConcurrentConnections = 1000;
                 serverOptions.Limits.MaxConcurrentUpgradedConnections = 1000;
             });
-            // ÅäÖÃ±íµ¥Ñ¡Ïî
+            // é…ç½®è¡¨å•é€‰é¡¹
             builder.Services.Configure<FormOptions>(options =>
             {
                 options.MultipartBodyLengthLimit = 10L * 1024 * 1024 * 1024; // 10GB
@@ -41,7 +46,7 @@ namespace ChuanLeMaServer
             });
 
             builder.WebHost.UseUrls("http://*:5210");
-            // 1¡¢ÅäÖÃ Serilog
+            // 1ã€é…ç½® Serilog
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
@@ -60,40 +65,60 @@ namespace ChuanLeMaServer
                 .CreateLogger();
 
             //builder.Host.UseSerilog();
-            // 2. Ê¹ÓÃ Autofac ×÷Îª·şÎñÈİÆ÷
+            // 2. ä½¿ç”¨ Autofac ä½œä¸ºæœåŠ¡å®¹å™¨
             builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory())
                 .UseSerilog();
+            // 3. æ·»åŠ  DbContext åˆ°å†…ç½®å®¹å™¨ï¼ˆä¼šè¢«Autofacæ¥ç®¡ï¼‰
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+            builder.Services.AddDbContext<AppDbContext>(options =>
+                options.UseMySql(
+                    connectionString,
+                    ServerVersion.AutoDetect(connectionString)
+                ));
 
-            // 3. ÅäÖÃ Autofac ÈİÆ÷
+            // 4. é…ç½® Autofac å®¹å™¨
             builder.Host.ConfigureContainer<ContainerBuilder>(containerBuilder =>
             {
-                // ×¢²á¿ØÖÆÆ÷£¨Ö§³ÖÊôĞÔ×¢Èë£©
+                // æ³¨å†Œæ§åˆ¶å™¨ï¼ˆæ”¯æŒå±æ€§æ³¨å…¥ï¼‰
                 //containerBuilder.RegisterType<Controllers.ProductsController>()
                 //    .PropertiesAutowired();
 
-                // ×¢²á·şÎñ
+                // æ³¨å†ŒæœåŠ¡
                 //containerBuilder.RegisterType<ProductService>()
                 //    .As<IProductService>()
                 //    .InstancePerLifetimeScope();
 
-                // ×¢²á Serilog ILogger
-                // ÕıÈ·×¢²á Microsoft.Extensions.Logging.ILoggerFactory
+                // æ³¨å†Œ Serilog ILogger
+                // æ­£ç¡®æ³¨å†Œ Microsoft.Extensions.Logging.ILoggerFactory
                 containerBuilder.RegisterInstance(new SerilogLoggerFactory(Log.Logger, true))
                     .As<ILoggerFactory>()
                     .SingleInstance();
 
-                // ×¢²á·ºĞÍ ILogger<T>
+                // æ³¨å†Œæ³›å‹ ILogger<T>
                 containerBuilder.RegisterGeneric(typeof(Logger<>))
                     .As(typeof(ILogger<>))
                     .SingleInstance();
 
-                // ×¢²á·ºĞÍ ILogger<T>
+                // æ³¨å†Œæ³›å‹ ILogger<T>
                 //containerBuilder.RegisterGeneric(typeof(Logger<>))
                 //    .As(typeof(ILogger<>))
                 //    .SingleInstance();
 
-                // ×¢²áÆäËû·şÎñ
+                // æ³¨å†Œå…¶ä»–æœåŠ¡
                 //containerBuilder.RegisterModule(new ServiceModule());
+
+                //æ³¨å†Œä»“å‚¨å®ç°
+                containerBuilder.RegisterAssemblyTypes(typeof(AppDbContext).Assembly)
+                                .Where(t => t.Name.EndsWith("RepositoryImpl"))
+                                .AsImplementedInterfaces()
+                                .InstancePerLifetimeScope();
+                //æ³¨å†ŒæœåŠ¡å®ç°
+                var assembly = Assembly.Load("Service");  // æŒ‡å®šç¨‹åºé›†åç§°ï¼ˆä¸å¸¦ .dllï¼‰
+                containerBuilder.RegisterAssemblyTypes(assembly)
+                    .Where(t => t.Name.EndsWith("ServiceImpl"))
+                    .AsImplementedInterfaces()
+                    .InstancePerLifetimeScope();
+
             });
             // Add services to the container.
 
@@ -101,12 +126,18 @@ namespace ChuanLeMaServer
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
 
+
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
+                app.UseSwaggerUI(options =>
+                {
+                    options.SwaggerEndpoint("/openapi/v1.json", "v1"); 
+                });
             }
 
             app.UseAuthorization();
@@ -114,7 +145,7 @@ namespace ChuanLeMaServer
 
             app.MapControllers();
 
-            //// Ìí¼ÓÇëÇóÈÕÖ¾ÖĞ¼ä¼ş
+            //// æ·»åŠ è¯·æ±‚æ—¥å¿—ä¸­é—´ä»¶
             //app.UseSerilogRequestLogging(options =>
             //{
             //    options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
@@ -123,7 +154,7 @@ namespace ChuanLeMaServer
             //        httpContext.Response.StatusCode > 499 ? LogEventLevel.Error : LogEventLevel.Information;
             //});
 
-            //// È·±£ÔÚÓ¦ÓÃ¹Ø±ÕÊ±Ë¢ĞÂÈÕÖ¾
+            //// ç¡®ä¿åœ¨åº”ç”¨å…³é—­æ—¶åˆ·æ–°æ—¥å¿—
             //app.Lifetime.ApplicationStopped.Register(Log.CloseAndFlush);
 
             app.Run();
