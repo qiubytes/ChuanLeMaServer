@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="ChuanLeMaServer/ChuanLeMaServer.csproj" />
+  <Project Path="Common/Common.csproj" Id="31d01b6a-b911-44f5-a253-9e79f16ac651" />
   <Project Path="Dto/Dto.csproj" />
   <Project Path="Model/Model.csproj" />
   <Project Path="Repository/Repository.csproj" />

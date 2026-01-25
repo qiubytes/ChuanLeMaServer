@@ -18,5 +18,15 @@ namespace Service.Implements
         {
             return await _appUserRepository.All();
         }
+
+        public async Task<(bool, string, string)> Login(string username, string password)
+        {
+            return await _appUserRepository.Login(username, password);
+        }
+
+        public async Task<(bool, string)> Register(AppUser appUser)
+        {
+            return await _appUserRepository.Register(appUser);
+        }
     }
 }

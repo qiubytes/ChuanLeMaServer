@@ -2,14 +2,10 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Model
+namespace Dto.User
 {
-    /// <summary>
-    /// 用户实体类
-    /// </summary>
-    public class AppUser
+    public class RegisterRequestDto
     {
-        public required string Id { get; set; }
         public required string UserName { get; set; }
         public string? Email { get; set; }
         public required string Password { get; set; }

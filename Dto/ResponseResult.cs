@@ -1,4 +1,4 @@
-namespace Dto.File;
+namespace Dto;
 
 /// <summary>
 /// 泛型 控制器返回类

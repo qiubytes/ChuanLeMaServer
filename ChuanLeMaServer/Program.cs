@@ -1,8 +1,10 @@
 ﻿
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
+using ChuanLeMaServer.Filters;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.OpenApi;
 using Repository;
 using Serilog;
@@ -46,7 +48,7 @@ namespace ChuanLeMaServer
                 options.BufferBody = true;
             });
 
-            builder.WebHost.UseUrls("http://*:5210");
+            builder.WebHost.UseUrls("http://*:52100");
             // 1、配置 Serilog
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
@@ -81,11 +83,17 @@ namespace ChuanLeMaServer
                 // 启用详细错误
                 .EnableDetailedErrors()
                 // 配置日志
-                .LogTo(Console.WriteLine, LogLevel.Information) 
+                .LogTo(Console.WriteLine, LogLevel.Information)
                 );
+            builder.Services.AddMemoryCache();//  内置容器注册 
             // 4. 配置 Autofac 容器
             builder.Host.ConfigureContainer<ContainerBuilder>(containerBuilder =>
             {
+                //由于我们使用了UseServiceProviderFactory(new AutofacServiceProviderFactory())，这些服务会被转移到Autofac容器中 如(AddMemoryCache)
+                //注册过滤器
+                containerBuilder.RegisterType<TokenAuthorizationFilter>()
+                                .AsSelf()
+                                .InstancePerLifetimeScope();
                 // 注册控制器（支持属性注入）
                 //containerBuilder.RegisterType<Controllers.ProductsController>()
                 //    .PropertiesAutowired();
@@ -127,13 +135,17 @@ namespace ChuanLeMaServer
                     .InstancePerLifetimeScope();
 
             });
-            // Add services to the container.
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers(options =>
+            {
+                //配置全局过滤器
+                options.Filters.AddService<TokenAuthorizationFilter>();
+                // 或者使用 TypeFilter
+                // options.Filters.Add(new TypeFilterAttribute(typeof(TokenAuthorizationFilter)));
+            });
+            //builder.Services.AddControllers();
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
-
-
 
             var app = builder.Build();
 
@@ -143,13 +155,10 @@ namespace ChuanLeMaServer
                 app.MapOpenApi();
                 app.UseSwaggerUI(options =>
                 {
-                    options.SwaggerEndpoint("/openapi/v1.json", "v1"); 
+                    options.SwaggerEndpoint("/openapi/v1.json", "v1");
                 });
             }
-
             app.UseAuthorization();
-
-
             app.MapControllers();
 
             //// 添加请求日志中间件

@@ -9,6 +9,7 @@ namespace Repository
     public class AppDbContext : DbContext
     {
         public DbSet<AppUser> AppUsers { get; set; }
+        public DbSet<AppUserToken> AppUserTokens { get; set; }
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
 
@@ -25,7 +26,18 @@ namespace Repository
                     .HasMaxLength(20);
                 entity.Property(e => e.Password)
                 .IsRequired()
-                .HasMaxLength(16);
+                .HasMaxLength(32);//md5 长度32 个16进制字符
+            });
+            modelBuilder.Entity<AppUserToken>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.UserId)
+                    .IsRequired();
+                entity.Property(e => e.Token)
+                    .IsRequired();
+                entity.Property(e => e.AddTime)
+                    .HasColumnType("datetime")
+                    .IsRequired();
             });
         }
     }
