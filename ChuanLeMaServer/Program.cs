@@ -89,7 +89,11 @@ namespace ChuanLeMaServer
             // 4. 配置 Autofac 容器
             builder.Host.ConfigureContainer<ContainerBuilder>(containerBuilder =>
             {
-                //由于我们使用了UseServiceProviderFactory(new AutofacServiceProviderFactory())，这些服务会被转移到Autofac容器中 如(AddMemoryCache)
+                /*
+                 UseServiceProviderFactory(new AutofacServiceProviderFactory()) 会将 builder.Services 中注册的服务转移到 Autofac 如(AddMemoryCache)，但需要注意：
+                    转移是自动的，但生命周期可能会有微妙差异
+                    不要在 Autofac 中重复注册相同的服务 
+                 */ 
                 //注册过滤器
                 containerBuilder.RegisterType<TokenAuthorizationFilter>()
                                 .AsSelf()
