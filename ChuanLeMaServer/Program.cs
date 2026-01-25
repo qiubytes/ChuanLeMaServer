@@ -9,6 +9,7 @@ using Serilog;
 using Serilog.Events;
 using Serilog.Extensions.Logging;
 using System;
+using System.Diagnostics;
 using System.Reflection;
 
 namespace ChuanLeMaServer
@@ -74,8 +75,14 @@ namespace ChuanLeMaServer
                 options.UseMySql(
                     connectionString,
                     ServerVersion.AutoDetect(connectionString)
-                ));
-
+                )
+                // 启用敏感数据日志（包含参数值）
+                .EnableSensitiveDataLogging()
+                // 启用详细错误
+                .EnableDetailedErrors()
+                // 配置日志
+                .LogTo(Console.WriteLine, LogLevel.Information) 
+                );
             // 4. 配置 Autofac 容器
             builder.Host.ConfigureContainer<ContainerBuilder>(containerBuilder =>
             {
