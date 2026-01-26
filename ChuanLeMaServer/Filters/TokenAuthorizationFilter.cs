@@ -1,11 +1,27 @@
-﻿using Dto;
+﻿using ChuanLeMaServer.Models;
+using Dto;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Caching.Memory;
+using System.Security.Claims;
+using System.Security.Principal;
+using System.Threading.Tasks;
 
 namespace ChuanLeMaServer.Filters
 {
+    /*
+    Authorization（授权） - 解决"你能做什么"的问题
+    csharp
+    // 对应：app.UseAuthorization() + [Authorize]特性  (标准不需要使用filter 所以这个filter没使用)
+    // 核心：AuthorizationMiddleware + 授权策略
+    // 职责：
+    // 1. 检查用户是否有权限访问特定资源
+    // 2. 验证角色、策略、权限
+    // 3. 处理403 Forbidden 
+     
+     */
     /// <summary>
     /// token身份验证过滤器
     /// // 在 Controller 或 Action 上使用
@@ -44,9 +60,9 @@ namespace ChuanLeMaServer.Filters
 
             // 4. 提取实际 Token
             var actualToken = authHeader[0];// token.Substring("Bearer ".Length).Trim();
-             
-            var userName = _memoryCache.Get<string>(actualToken);
-            if (string.IsNullOrEmpty(userName))
+
+            UserToken utoken = _memoryCache.Get<UserToken>(actualToken);
+            if (utoken == null)
             {
                 context.Result = new UnauthorizedObjectResult(new ResponseResult<string>(msg: "token失效", code: -1));
                 return;
@@ -64,8 +80,16 @@ namespace ChuanLeMaServer.Filters
                 // 3. 生命周期：请求开始时创建，请求结束后销毁
                 // 4. 访问权限：仅服务器端代码可以访问 
              */
-            context.HttpContext.Items["UserName"] = userName;
+            //context.HttpContext.Items["UserName"] = utoken.UserName;
+
+            //// 5. 创建 ClaimsPrincipal 并设置 HttpContext.User 以便后续使用
+            //ClaimsIdentity claimsIdentity = new ClaimsIdentity(utoken.Claims, "Token");
+            //ClaimsPrincipal claimsPrincipal = new System.Security.Claims.ClaimsPrincipal(claimsIdentity);
+            //context.HttpContext.User = claimsPrincipal;
+
+
         }
+
 
     }
 

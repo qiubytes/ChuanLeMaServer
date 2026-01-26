@@ -2,6 +2,8 @@
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using ChuanLeMaServer.Filters;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -93,7 +95,7 @@ namespace ChuanLeMaServer
                  UseServiceProviderFactory(new AutofacServiceProviderFactory()) 会将 builder.Services 中注册的服务转移到 Autofac 如(AddMemoryCache)，但需要注意：
                     转移是自动的，但生命周期可能会有微妙差异
                     不要在 Autofac 中重复注册相同的服务 
-                 */ 
+                 */
                 //注册过滤器
                 containerBuilder.RegisterType<TokenAuthorizationFilter>()
                                 .AsSelf()
@@ -139,11 +141,31 @@ namespace ChuanLeMaServer
                     .InstancePerLifetimeScope();
 
             });
+             
+            /// 配置认证方案
+            builder.Services.AddAuthentication(options =>
+            {
+                options.DefaultScheme = "CustomToken";
+                options.DefaultAuthenticateScheme = "CustomToken";
+                options.DefaultChallengeScheme = "CustomToken";
+            }).AddScheme<AuthenticationSchemeOptions, CustomTokenAuthenticationHandler>("CustomToken", options => { });
+            ///设置默认策略
+            builder.Services.AddAuthorization(options =>
+            {
+                //  DefaultPolicy 只对 [Authorize] 生效
+                // options.DefaultPolicy = new AuthorizationPolicyBuilder()
+                //     .RequireAuthenticatedUser()
+                //     .Build();
 
+                //   使用 FallbackPolicy - 对所有端点生效
+                options.FallbackPolicy = new AuthorizationPolicyBuilder()
+                    .RequireAuthenticatedUser()
+                    .Build();
+            });
             builder.Services.AddControllers(options =>
             {
                 //配置全局过滤器
-                options.Filters.AddService<TokenAuthorizationFilter>();
+                //options.Filters.AddService<TokenAuthorizationFilter>();
                 // 或者使用 TypeFilter
                 // options.Filters.Add(new TypeFilterAttribute(typeof(TokenAuthorizationFilter)));
             });
@@ -162,8 +184,11 @@ namespace ChuanLeMaServer
                     options.SwaggerEndpoint("/openapi/v1.json", "v1");
                 });
             }
-            app.UseAuthorization();
-            app.MapControllers();
+            //认证中间件
+            app.UseAuthentication();
+            //授权中间件
+            app.UseAuthorization(); // ← 这会执行AuthenticationHandler的HandleAuthenticateAsync()
+            app.MapControllers();  // ← 这会检查[Authorize]特性和策略
 
             //// 添加请求日志中间件
             //app.UseSerilogRequestLogging(options =>

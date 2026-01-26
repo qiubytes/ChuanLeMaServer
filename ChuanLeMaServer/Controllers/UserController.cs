@@ -1,4 +1,5 @@
-﻿using Common;
+﻿using ChuanLeMaServer.Models;
+using Common;
 using Dto;
 using Dto.File;
 using Microsoft.AspNetCore.Authorization;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.Extensions.Caching.Memory;
 using Repository.Interfaces;
 using Service.Interfaces;
+using System.Security.Claims;
 
 namespace ChuanLeMaServer.Controllers
 {
@@ -31,6 +33,7 @@ namespace ChuanLeMaServer.Controllers
             _memoryCache = memoryCache;
         }
         [HttpGet("test")]
+        [Authorize(Roles ="Admin")]
         public async Task<IActionResult> Test()
         {
             var user = await _appuserservice.All();
@@ -48,7 +51,19 @@ namespace ChuanLeMaServer.Controllers
             var (success, message, token) = await _appuserservice.Login(loginRequest.UserName, CryptoUtils.DoubleMD5(loginRequest.Password));
             if (success)
             {
-                _memoryCache.Set(token, loginRequest.UserName, TimeSpan.FromDays(2)); // 设置缓存，过期时间为2小时
+                UserToken userToken = new UserToken
+                {
+                    UserName = loginRequest.UserName,
+                    Token = token,
+                    Claims = new List<System.Security.Claims.Claim>
+                    {
+                        new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Name, loginRequest.UserName),
+                        new System.Security.Claims.Claim(ClaimTypes.Role,"Admin"),
+                        new System.Security.Claims.Claim(ClaimTypes.Role,"SuperAdmin"),
+                    }
+
+                };
+                _memoryCache.Set(token, userToken, TimeSpan.FromDays(2)); // 设置缓存，过期时间为2小时
                 return Ok(new ResponseResult<string>(token));
             }
             else
