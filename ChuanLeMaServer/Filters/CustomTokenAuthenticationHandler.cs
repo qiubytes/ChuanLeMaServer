@@ -74,7 +74,7 @@ namespace ChuanLeMaServer.Filters
 
                 ClaimsPrincipal claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
 
-                // 5. 保存 UserName 到 Items（保持你原有的逻辑）
+                // 5. 保存 UserName 到 Items（可选）
                 Context.Items["UserName"] = utoken.UserName;
 
                 // 6. 返回认证成功的票据
